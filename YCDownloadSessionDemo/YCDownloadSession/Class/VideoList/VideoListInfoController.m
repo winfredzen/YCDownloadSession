@@ -136,9 +136,9 @@ static NSInteger const pageSize = 10;
     }
     if (!item) {
         item = [YCDownloadItem itemWithUrl:model.video_url fileId:model.vid];
-        item.extraData = [VideoListInfoModel dateWithInfoModel:model];
-        item.enableSpeed = true;
-        [YCDownloadManager startDownloadWithItem:item];
+        item.extraData = [VideoListInfoModel dateWithInfoModel:model]; //将模型转为json放在extraData中
+        item.enableSpeed = true; //计速
+        [YCDownloadManager startDownloadWithItem:item]; //开始下载
     }
     
     VideoCacheController *vc = [[VideoCacheController alloc] init];

@@ -146,6 +146,7 @@ static NSString * const kIsAllowCellar = @"kIsAllowCellar";
     return task;
 }
 
+//开始下载
 - (BOOL)resumeTask:(YCDownloadTask *)task {
     if(!task) return false;
     if (self.isNeedCreateSession) {
@@ -196,8 +197,8 @@ static NSString * const kIsAllowCellar = @"kIsAllowCellar";
         NSLog(@"[resumeTask] task resume failed: %@", error);
         return false;
     }
-    [self memCacheDownloadTask:downloadTask task:task];
-    [downloadTask resume];
+    [self memCacheDownloadTask:downloadTask task:task]; //缓存
+    [downloadTask resume];//开始下载
     NSError *err = nil;
     if (![self checkDownloadTaskState:downloadTask task:task error:&err]) {
         NSLog(@"[resumeTask] task resume failed: %@", err);
@@ -272,7 +273,7 @@ static NSString * const kIsAllowCellar = @"kIsAllowCellar";
 - (void)memCacheDownloadTask:(NSURLSessionDownloadTask *)downloadTask  task:(YCDownloadTask *)task{
     task.downloadTask = downloadTask;
     //record taskId for coldLaunch recovery download
-    task.stid = [self sessionTaskIdWithDownloadTask:downloadTask];
+    task.stid = [self sessionTaskIdWithDownloadTask:downloadTask];//taskIdentifier
     [self.memCache setObject:task forKey:downloadTask];
     [self saveDownloadTask:task];
 }
@@ -298,6 +299,7 @@ static NSString * const kIsAllowCellar = @"kIsAllowCellar";
     [YCDownloadDB removeTask:task];
 }
 
+//保存task
 - (void)saveDownloadTask:(YCDownloadTask *)task {
     [YCDownloadDB saveTask:task];
 }

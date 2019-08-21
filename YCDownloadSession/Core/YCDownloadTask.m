@@ -20,7 +20,7 @@
 @property (nonatomic, assign, readonly) BOOL isFinished;
 @property (nonatomic, assign, readonly) BOOL isSupportRange;
 @property (nonatomic, assign, readonly) NSUInteger createTime;
-@property (nonatomic, strong) NSURLSessionDownloadTask *downloadTask;
+@property (nonatomic, strong) NSURLSessionDownloadTask *downloadTask; //内部包含一个下载task
 @property (nonatomic, assign) BOOL isDeleted;
 @end
 
@@ -47,7 +47,7 @@
         NSString *url = request.URL.absoluteString;
         _request = request;
         _downloadURL = url;
-        _taskId = [YCDownloadTask taskIdForUrl:url fileId:[NSUUID UUID].UUIDString];
+        _taskId = [YCDownloadTask taskIdForUrl:url fileId:[NSUUID UUID].UUIDString]; //生成taskid
         _priority = priority ? priority : NSURLSessionTaskPriorityDefault;
         _progressHandler = progress;
         _completionHandler = completion;
@@ -57,7 +57,7 @@
 
 + (instancetype)taskWithDict:(NSMutableDictionary *)dict {
     YCDownloadTask *task = [[self alloc] initWithPrivate];
-    [task setValuesForKeysWithDictionary:dict];
+    [task setValuesForKeysWithDictionary:dict]; //dic->模型
     return task;
 }
 

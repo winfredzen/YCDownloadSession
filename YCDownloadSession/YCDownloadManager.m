@@ -31,7 +31,7 @@
 }
 @property (nonatomic, strong) NSMutableArray <YCDownloadItem *> *waitItems;
 @property (nonatomic, strong) NSMutableArray <YCDownloadItem *> *runItems;
-@property (nonatomic, strong) YCDConfig *config;
+@property (nonatomic, strong) YCDConfig *config; //配置
 @end
 
 @implementation YCDownloadManager
@@ -74,6 +74,7 @@ static id _instance;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(appWillTerminate) name:UIApplicationWillTerminateNotification object:nil];
 }
 
+//获取对应用户uid的所有下载
 - (void)restoreItems {
     [[YCDownloadDB fetchAllDownloadItemWithUid:self.uid] enumerateObjectsUsingBlock:^(YCDownloadItem * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
         [self downloadFinishedWithItem:obj];
@@ -118,7 +119,7 @@ static id _instance;
 }
 
 + (void)startDownloadWithItem:(YCDownloadItem *)item {
-    [YCDownloadMgr startDownloadWithItem:item priority:NSURLSessionTaskPriorityDefault];
+    [YCDownloadMgr startDownloadWithItem:item priority:NSURLSessionTaskPriorityDefault];//默认优先级0.5
 }
 
 + (void)startDownloadWithItem:(YCDownloadItem *)item priority:(float)priority {
@@ -229,9 +230,10 @@ static id _instance;
 
 #pragma mark - private
 
+//开始下载
 - (void)startDownloadWithItem:(YCDownloadItem *)item priority:(float)priority{
     if(!item) return;
-    YCDownloadItem *oldItem = [YCDownloadDB itemWithTaskId:item.taskId];
+    YCDownloadItem *oldItem = [YCDownloadDB itemWithTaskId:item.taskId]; //即原来有下载记录
     if (oldItem && [self downloadFinishedWithItem:oldItem]) {
         NSLog(@"[startDownloadWithItem] detect item finished!");
         [self startNextDownload];
@@ -257,7 +259,7 @@ static id _instance;
 - (BOOL)downloadFinishedWithItem:(YCDownloadItem *)item {
     int64_t localFileSize = [YCDownloadUtils fileSizeWithPath:item.savePath];
     BOOL fileFinished = localFileSize>0 && localFileSize == item.fileSize;
-    if (fileFinished) {
+    if (fileFinished) {//已下载完成的
         [item setValue:@(localFileSize) forKey:@"_downloadedSize"];
         item.downloadStatus = YCDownloadStatusFinished;
         return true;
@@ -287,19 +289,20 @@ static id _instance;
     return task;
 }
 
+//下载item
 - (void)resumeDownloadWithItem:(YCDownloadItem *)item{
-    if ([self downloadFinishedWithItem:item]) {
+    if ([self downloadFinishedWithItem:item]) {//已下载完成
         NSLog(@"[resumeDownloadWithItem] detect item finished : %@", item);
         [self startNextDownload];
         return;
     }
-    if (![self canResumeDownload]) {
+    if (![self canResumeDownload]) { //超过并发下载数量限制
         item.downloadStatus = YCDownloadStatusWaiting;
         [self.waitItems addObject:item];
         return;
     }
-    item.downloadStatus = YCDownloadStatusDownloading;
-    YCDownloadTask *task = [self taskWithItem:item];
+    item.downloadStatus = YCDownloadStatusDownloading; //下载中
+    YCDownloadTask *task = [self taskWithItem:item]; //获取task
     task.completionHandler = item.completionHandler;
     task.progressHandler = item.progressHandler;
     if([[YCDownloader downloader] resumeTask:task]) {
@@ -335,6 +338,7 @@ static id _instance;
     if(!item.noNeedStartNext) [self startNextDownload];
 }
 
+//暂停所有的下载
 - (void)pauseAllDownloadTask {
     [[YCDownloadDB fetchAllDownloadingItemWithUid:self.uid] enumerateObjectsUsingBlock:^(YCDownloadItem * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
         if (obj.downloadStatus == YCDownloadStatusWaiting || obj.downloadStatus == YCDownloadStatusDownloading) {

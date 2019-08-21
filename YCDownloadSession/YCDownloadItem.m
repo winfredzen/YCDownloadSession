@@ -24,7 +24,7 @@ NSString * const kDownloadTaskFinishedNoti = @"kDownloadTaskFinishedNoti";
 @property (nonatomic, assign) BOOL isRemoved;
 @property (nonatomic, assign) BOOL noNeedStartNext;
 @property (nonatomic, copy) NSString *fileExtension;
-@property (nonatomic, assign, readonly) NSUInteger createTime;
+@property (nonatomic, assign, readonly) NSUInteger createTime; //创建时间
 @property (nonatomic, assign) uint64_t preDSize;
 @property (nonatomic, strong) NSTimer *speedTimer;
 @end
@@ -74,7 +74,7 @@ NSString * const kDownloadTaskFinishedNoti = @"kDownloadTaskFinishedNoti";
     }
     //通知优先级最后，不与上面的finished重合
     if (status == YCDownloadStatusFinished || status == YCDownloadStatusFailed) {
-        [YCDownloadDB saveItem:self];
+        [YCDownloadDB saveItem:self]; //数据库中保存下载状态
         [[NSNotificationCenter defaultCenter] postNotificationName:kDownloadTaskFinishedNoti object:self];
     }
     [self calculaterSpeedWithStatus:status];
@@ -162,7 +162,7 @@ NSString * const kDownloadTaskFinishedNoti = @"kDownloadTaskFinishedNoti";
 
 - (YCCompletionHandler)completionHandler {
     __weak typeof(self) weakSelf = self;
-    return ^(NSString *localPath, NSError *error){
+    return ^(NSString *localPath, NSError *error){ //完成后的回调
         YCDownloadTask *task = [YCDownloadDB taskWithTid:self.taskId];
         if (error) {
             NSLog(@"[Item completionHandler] error : %@", error);
@@ -174,12 +174,12 @@ NSString * const kDownloadTaskFinishedNoti = @"kDownloadTaskFinishedNoti";
         // bg completion ,maybe had no extension
         if (!self.fileExtension) [self setFileExtensionWithTask:task];
         NSError *saveError = nil;
-        if([[NSFileManager defaultManager] fileExistsAtPath:self.savePath]){
+        if([[NSFileManager defaultManager] fileExistsAtPath:self.savePath]){ //文件已存在，先移除
             NSLog(@"[Item completionHandler] Warning file Exist at path: %@ and replaced it!", weakSelf.savePath);
             [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:nil];
         }
         
-        if([[NSFileManager defaultManager] moveItemAtPath:localPath toPath:self.savePath error:&saveError]){
+        if([[NSFileManager defaultManager] moveItemAtPath:localPath toPath:self.savePath error:&saveError]){ //移动到目标位置
             NSAssert(self.fileExtension, @"file extension can not nil!");
             int64_t fileSize = [YCDownloadUtils fileSizeWithPath:weakSelf.savePath];
             self->_downloadedSize = fileSize;

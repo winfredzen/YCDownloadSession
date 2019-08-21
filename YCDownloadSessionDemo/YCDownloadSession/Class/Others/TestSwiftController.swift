@@ -9,7 +9,7 @@
 import UIKit
 import YCDownloadSession
 
-class TestSwiftController: UIViewController {
+@objc class TestSwiftController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -24,7 +24,7 @@ class TestSwiftController: UIViewController {
         }
     }
     
-    func logInfo() {
+    @objc func logInfo() {
         print("Hello, here is Swift log")
     }
 

@@ -66,13 +66,13 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
     path = [path stringByAppendingPathComponent:@"YCDownload"];
     [YCDownloadUtils createPathIfNotExist:path];
     path = [path stringByAppendingPathComponent:@"YCDownload.db"];
-    if (sqlite3_open(path.UTF8String, &_db) != SQLITE_OK) {
+    if (sqlite3_open(path.UTF8String, &_db) != SQLITE_OK) { //打开数据库失败
         NSLog(@"[db error]");
         return;
     }
     NSString *sql = @"CREATE TABLE IF NOT EXISTS downloadItem (pid integer PRIMARY KEY AUTOINCREMENT,taskId text not null unique,fileId text, downloadURL text,uid text,fileType text,fileExtension text,rootPath text,fileSize integer,downloadedSize integer,downloadStatus integer,extraData BLOB, version text not null, createTime integer); \n"
     "CREATE TABLE IF NOT EXISTS downloadTask (pid integer PRIMARY KEY AUTOINCREMENT,taskId text not null unique, downloadURL text, stid integer, priority float, enableSpeed integer, fileSize INTEGER, downloadedSize INTEGER, version text not null, tmpName text, resumeData BLOB, extraData BLOB, createTime integer);";
-    
+    //创建表
     [self performBlock:^BOOL{ return [self execSql:sql]; } sync:true] ? NSLog(@"[init db success]") : false;
     [self compatibleDatabase];
     _memCacheTasks = [NSMutableDictionary dictionary];
@@ -85,7 +85,7 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
 + (void)compatibleDatabase {
     NSString *localVersion = [[NSUserDefaults standardUserDefaults] valueForKey:kYCDownloadVersionKey];
     NSString *curVersion = [YCDownloadTask downloaderVerison];
-    if ([curVersion compare:localVersion options:NSNumericSearch] == NSOrderedDescending){
+    if ([curVersion compare:localVersion options:NSNumericSearch] == NSOrderedDescending){//降序>
         [[NSUserDefaults standardUserDefaults] setValue:curVersion forKey:kYCDownloadVersionKey];
         if ([kYCDownloadDbMinUpgradeVerion compare:localVersion options:NSNumericSearch] == NSOrderedDescending) {
             NSString *sql = @"ALTER table downloadItem add enableSpeed integer;";
@@ -159,9 +159,12 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
         arrM = [NSMutableArray array];
         while (sqlite3_step(stmt) == SQLITE_ROW) {
             NSMutableDictionary *dictM = [NSMutableDictionary dictionary];
+            ///一共获取表中所有列数(字段数)
             int count = sqlite3_column_count(stmt);
             for (int i=0; i<count; i++) {
+                //取出i位置列的字段名,作为字典的键key
                 const char *key = sqlite3_column_name(stmt, i);
+                ////取出i位置存储的值,作为字典的值value
                 id ocObj = [self objectWithStmt:stmt idx:i];
                 [dictM setValue:ocObj forKey:[[NSString alloc] initWithUTF8String:key]];
             }
@@ -272,6 +275,7 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
     return item;
 }
 
+//获取对应uid的所有下载
 + (NSArray <YCDownloadItem *> *)fetchAllDownloadItemWithUid:(NSString *)uid {
     __block NSMutableArray *results = [NSMutableArray array];
     [self performBlock:^BOOL{
@@ -286,6 +290,7 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
     return results;
 }
 
+//获取已下载的item
 + (NSArray <YCDownloadItem *> *)fetchAllDownloadedItemWithUid:(NSString *)uid {
     __block NSMutableArray *results = [NSMutableArray array];
     [self performBlock:^BOOL{
@@ -300,6 +305,7 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
     return results;
 }
 
+//获取正在下载的item
 + (NSArray <YCDownloadItem *> *)fetchAllDownloadingItemWithUid:(NSString *)uid {
     __block NSMutableArray *results = [NSMutableArray array];
     [self performBlock:^BOOL{
@@ -342,6 +348,7 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
     return items;
 }
 
+//通过文件id fid 和 uid 构建YCDownloadItem，如果在数据库中不存在，返回nil
 + (YCDownloadItem *)itemWithFid:(NSString *)fid uid:(NSString *)uid{
     __block YCDownloadItem *item = nil;
     [self performBlock:^BOOL{
@@ -408,11 +415,12 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
     
 }
 
+//保存item
 + (BOOL)saveDownloadItem:(YCDownloadItem *)item {
     NSString *sql = [NSString stringWithFormat:@"select * from downloadItem WHERE taskId == '%@'", item.taskId];
     NSArray *results = [self selectSql:sql];
     BOOL result = false;
-    if (results.count==0) {
+    if (results.count==0) {//不存在
         _memCacheItems[item.taskId] = item;
         NSMutableString *insertSqlKeys = [NSMutableString string];
         NSMutableString *insertSqlValues = [NSMutableString string];
@@ -439,7 +447,7 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
             }
             result = false;
         }
-    }else{
+    }else{ //已存在
         result = [self updateItem:item withResults:results];
     }
     return result;
@@ -499,6 +507,7 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
     return tasks;
 }
 
+//通过stid获取task
 + (NSArray *)taskWithStid:(NSInteger)stid {
     NSMutableArray *tasks = [NSMutableArray array];
     [self performBlock:^BOOL{
@@ -589,8 +598,8 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
     NSString *sql = [NSString stringWithFormat:@"select * from downloadTask WHERE taskId == '%@'", task.taskId];
     NSArray *results = [self selectSql:sql];
     BOOL result = false;
-    if (results.count==0) {
-        _memCacheTasks[task.taskId] = task;
+    if (results.count==0) { //不存在
+        _memCacheTasks[task.taskId] = task; //缓存在数组中
         NSMutableString *insertSqlKeys = [NSMutableString string];
         NSMutableString *insertSqlValues = [NSMutableString string];
         int count = sizeof(allTaskKeys) / sizeof(allTaskKeys[0]);
@@ -603,6 +612,7 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
                 [insertSqlValues appendFormat:@"%@'%@'", insertSqlValues.length!=0 ? @", " : @"", value];
             }
         }];
+        //构建sql语句
         sql = [NSString stringWithFormat:@"insert into downloadTask(%@) VALUES(%@)", insertSqlKeys, insertSqlValues];
         result = [self execSql:sql];
         if(result && task.resumeData){
@@ -611,7 +621,7 @@ static NSMutableDictionary <NSString* ,YCDownloadItem *> *_memCacheItems;
         if (result && task.extraData) {
             result = [self updateTaskDataWithTid:task.taskId data:task.extraData dataKey:@"extraData"];
         }
-    }else{
+    }else{ //已存在
         result = [self updateTask:task withResults:results];
     }
     return result;
